@@ -13,8 +13,7 @@ The Weighing System is a Django-based web application that allows users to input
 ## Technologies Used
 - **Backend**: Django
 - **Frontend**: HTML, CSS, JavaScript
-- **Database**: SQLite (or any other database of your choice)
-- **Libraries**: Chart.js (for future enhancements)
+- **Database**: SQLite 
 
 ## Installation
 
@@ -71,7 +70,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Acknowledgments
 - Django Documentation for guidance.
-- Chart.js for visualization capabilities.
 - Community support and resources.
 
 ## Contributing
