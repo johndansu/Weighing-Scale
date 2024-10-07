@@ -27,7 +27,7 @@
     <div class="dashboard-container">
         <!-- Weighing Section -->
         <section class="weighing-section">
-            <h2>Weighing</h2>
+            <h2 style="text-align: center;">Weighing</h2>
             <form method="POST" action="{% url 'weighing_process' %}">
                 {% csrf_token %}
                 <label for="weight">Enter Weight (kg):</label>
@@ -40,7 +40,7 @@
 
         <!-- Review Records Section -->
         <section class="review-section">
-            <h2>Review Weighing Records</h2>
+            <h2>Review Weighing Records:</h2>
             <table>
                 <thead>
                     <tr>
