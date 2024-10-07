@@ -1,0 +1,76 @@
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weighing Dashboard</title>
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+</head>
+<body>
+    <header>
+        <div class="logo">Weighing System</div>
+        <nav class="user-menu">
+            <span>Welcome, {{ request.user.username }}</span>
+            <form method="POST" action="{% url 'logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" style="background-color: green; color: white; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">
+                    Logout
+                </button>
+            </form>
+        </nav>
+    </header>
+
+    <div class="dashboard-container">
+        <!-- Weighing Section -->
+        <section class="weighing-section">
+            <h2>Weighing</h2>
+            <form method="POST" action="{% url 'weighing_process' %}">
+                {% csrf_token %}
+                <label for="weight">Enter Weight (kg):</label>
+                <input type="text" id="weight" name="weight" placeholder="Enter manually" required>
+                <button type="button" id="get-weight">Get Weight from Scale</button>
+                <br><br>
+                <button type="submit">Submit</button>  <!-- Submit button -->
+            </form> 
+        </section>
+
+        <!-- Review Records Section -->
+        <section class="review-section">
+            <h2>Review Weighing Records</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Record ID</th>
+                        {% comment %} <th>Username</th>  <!-- Change to Username --> {% endcomment %}
+                        <th>Weight (kg)</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in weight_records %}
+                        <tr>
+                            <td>{{ record.id }}</td>
+                            {% comment %} <td>{{ record.user.username }}</td>  <!-- Display Username --> {% endcomment %}
+                            <td>{{ record.weight }}</td>
+                            <td>{{ record.created_at|date:"Y-m-d h:i A" }}</td>  <!-- Updated date format -->
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{% url 'export_weights' %}" 
+               style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; border-radius: 5px; transition: background-color 0.3s ease;">
+                Download My Weight Records
+            </a>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Simulating weight retrieval from a scale
+        document.getElementById('get-weight').addEventListener('click', function() {
+            const simulatedWeight = Math.floor(Math.random() * 100) + 1;
+            document.getElementById('weight').value = simulatedWeight;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weighing Process</title>
+    <link rel="stylesheet" href="{% static 'css/weighing_process.css' %}">
+</head>
+<body>
+    <header>
+        <h1>Weighing Process</h1>
+    </header>
+
+    <main>
+        <section class="weighing-section">
+            <h2>Enter or Capture Weight</h2>
+            <form method="POST" action="{% url 'weighing_process' %}">  <!-- Ensure action is set to your view -->
+                {% csrf_token %}
+                <label for="manual-weight">Enter Weight (kg):</label>
+                <input type="number" id="manual-weight" name="weight" step="0.01" required>
+
+                <button type="submit">Submit Weight</button>
+            </form>
+
+            <hr>
+
+            <div class="automatic-weighing">
+                <h3>Or Capture Weight from Scale</h3>
+                <button id="capture-weight-btn">Capture from Scale</button>
+                <p id="captured-weight"></p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.getElementById('capture-weight-btn').addEventListener('click', function() {
+            // Simulate automatic weight capture (replace with real logic for connected scale)
+            let simulatedWeight = (Math.random() * 100).toFixed(2);
+            document.getElementById('captured-weight').innerText = `Captured Weight: ${simulatedWeight} kg`;
+        });
+    </script>
+</body>
+</html>

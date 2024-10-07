@@ -1,0 +1,157 @@
+/* dashboard.css */
+
+/* General Styles */
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f9;
+    color: #333;
+}
+
+header {
+    background-color: #3e8e41;
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.user-menu span {
+    margin-right: 20px;
+}
+
+.user-menu a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    background-color: #285c2f;
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.user-menu a:hover {
+    background-color: #1e4725;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Weighing Section */
+.weighing-section {
+    background-color: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.weighing-section h2 {
+    margin-top: 0;
+    font-size: 1.5em;
+}
+
+.weighing-section form {
+    display: flex;
+    flex-direction: column;
+}
+
+.weighing-section label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.weighing-section input[type="text"] {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+.weighing-section button {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #3e8e41;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.weighing-section button:hover {
+    background-color: #2e6931;
+}
+
+.weighing-section button[type="button"] {
+    background-color: #4caf50;
+    margin-bottom: 10px;
+}
+
+/* Review Section */
+.review-section {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.review-section h2 {
+    margin-top: 0;
+    font-size: 1.5em;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+tr:hover {
+    background-color: #ddd;
+}
+
+.messages {
+    margin-top: 20px;
+    list-style-type: none;
+    padding: 0;
+}
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .weighing-section, .review-section {
+        padding: 15px;
+    }
+
+    table, th, td {
+        font-size: 0.9em;
+    }
+}
