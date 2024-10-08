@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
@@ -11,6 +11,7 @@ from django.contrib.auth import views as auth_views
 from .models import WeightRecord
 from .forms import WeightForm
 from django.contrib import messages
+from .serial_util import read_from_serial
 
 # Create your views here.
 @login_required
@@ -58,11 +59,23 @@ def signup_view(request):
     return render(request, 'authentication/signup.html', {'form': form})
     
 
+@login_required
+def fetch_weight(request):
+    if request.method == 'GET':
+        weight = read_from_serial()  # Read weight from the RS232
+        return JsonResponse({'weight': weight})  # Return the weight in JSON format
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
 
 @login_required
 def submit_weight(request):
     if request.method == 'POST':
         weight = request.POST.get('weight')  # Get the weight from the POST request
+        
+        # If weight is not provided, try reading from the RS232
+        if not weight:
+            weight = read_from_serial()  # Read weight from the RS232
+            
         if weight:  # Check if weight is provided
             try:
                 WeightRecord.objects.create(user=request.user, weight=float(weight))  # Save the record
@@ -70,6 +83,9 @@ def submit_weight(request):
             except Exception as e:
                 print(f"Error saving weight: {e}")  # Print any error that occurs
                 return HttpResponse("An error occurred while saving your weight.")  # Optional: send an error response
+        else:
+            return HttpResponse("No weight provided, and unable to read from the scale.")  # Handle case where no weight is read
+        
     return render(request, 'dashboard.html')  # Render the dashboard if not POST
 
 @login_required

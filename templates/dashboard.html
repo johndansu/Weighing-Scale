@@ -30,9 +30,10 @@
             <h2 style="text-align: center;">Weighing</h2>
             <form method="POST" action="{% url 'weighing_process' %}">
                 {% csrf_token %}
-                <label for="weight">Enter Weight (kg):</label>
+                <label for="weight">Weight (kg):</label>
                 <input type="text" id="weight" name="weight" placeholder="Enter manually" required>
                 <button type="button" id="get-weight">Get Weight from Scale</button>
+                <p id="captured-weight"></p>
                 <br><br>
                 <button type="submit">Submit</button>  <!-- Submit button -->
             </form> 
@@ -72,10 +73,18 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Simulating weight retrieval from a scale
         document.getElementById('get-weight').addEventListener('click', function() {
-            const simulatedWeight = Math.floor(Math.random() * 100) + 1;
-            document.getElementById('weight').value = simulatedWeight;
+            fetch('/authentication/fetch_weight/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.weight) {
+                        document.getElementById('captured-weight').innerText = `Captured Weight: ${data.weight} kg`;
+                        document.getElementById('weight').value = data.weight;  // Set the weight input value
+                    } else {
+                        console.error('Error fetching weight:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         });
     </script>
 </body>
