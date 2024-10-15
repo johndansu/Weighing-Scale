@@ -80,6 +80,18 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
+    # 'default':{
+    #     'ENGINE':'mssql',                    # Must be "mssql"
+    #     'NAME':'learning',                       # DB name "test"
+    #     'USER':'sa',        
+    #     'PASSWORD':'fa13taha',
+    #     'HOST':'JOHN\\SQLEXPRESS', # <server>\<instance>
+    #     'PORT':'1433',                           # Keep it blank
+    #     'OPTIONS': {
+    #         'driver': 'ODBC Driver 18 for SQL Server',
+    #         'extra_params': 'TrustServerCertificate=no;',
+    #     },
+    # }
 }
 
 
