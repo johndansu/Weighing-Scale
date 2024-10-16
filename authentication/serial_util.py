@@ -1,13 +1,16 @@
 import serial
-import time
 
-def read_from_serial(port='/dev/ttyUSB0', baudrate=9600):
+def read_from_serial():
     try:
-        # Open the serial port
-        with serial.Serial(port, baudrate, timeout=1) as ser:
-            time.sleep(2)  # Allow some time for the connection to establish
-            line = ser.readline().decode('utf-8').strip()  # Read a line from the serial port
-            return line
+        # Set up the serial connection (adjust the port and baudrate as per your device)
+        ser = serial.Serial('COM3', 9600, timeout=1)  # Adjust the COM port (e.g., COM3)
+        ser.flush()
+
+        # Read data from the serial port
+        if ser.in_waiting > 0:
+            weight_data = ser.readline().decode('utf-8').strip()
+            return weight_data
+        return None  # Return None if no data is available
     except Exception as e:
-        print(f"Error reading from serial port: {e}")
+        print(f"Error reading from serial: {e}")
         return None

@@ -62,8 +62,8 @@ def signup_view(request):
 @login_required
 def fetch_weight(request):
     if request.method == 'GET':
-        weight = read_from_serial()  # Read weight from the RS232
-        return JsonResponse({'weight': weight})  # Return the weight in JSON format
+        weight = read_from_serial()  # Function to read weight from RS232
+        return JsonResponse({'weight': weight})
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
