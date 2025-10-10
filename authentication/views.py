@@ -16,8 +16,50 @@ from .serial_util import read_from_serial
 # Create your views here.
 @login_required
 def dashboard(request):
-    weight_records = WeightRecord.objects.filter(user=request.user).order_by('-created_at')[:10]
-    return render(request, 'dashboard.html', {'weight_records': weight_records})
+    from django.utils import timezone
+    from datetime import datetime
+    from django.db.models import Avg, Min, Max
+    
+    # Get all user's weight records
+    all_records = WeightRecord.objects.filter(user=request.user)
+    
+    # Date filtering
+    date_from = request.GET.get('from')
+    date_to = request.GET.get('to')
+    
+    filtered_records = all_records
+    if date_from:
+        filtered_records = filtered_records.filter(created_at__date__gte=date_from)
+    if date_to:
+        filtered_records = filtered_records.filter(created_at__date__lte=date_to)
+    
+    # Calculate total records
+    total_records = all_records.count()
+    
+    # Calculate today's records
+    today = timezone.now().date()
+    today_records = all_records.filter(created_at__date=today).count()
+    
+    # Advanced statistics
+    stats = all_records.aggregate(
+        avg_weight=Avg('weight'),
+        min_weight=Min('weight'),
+        max_weight=Max('weight')
+    )
+    
+    # Get recent 10 records for display (use filtered if dates are selected)
+    weight_records = filtered_records.order_by('-created_at')[:10]
+    
+    context = {
+        'weight_records': weight_records,
+        'total_records': total_records,
+        'today_records': today_records,
+        'avg_weight': round(stats['avg_weight'], 2) if stats['avg_weight'] else 0,
+        'min_weight': stats['min_weight'] if stats['min_weight'] else 0,
+        'max_weight': stats['max_weight'] if stats['max_weight'] else 0,
+    }
+    
+    return render(request, 'dashboard.html', context)
 
 def weighing_process(request):
     if request.method == 'POST':
@@ -79,12 +121,18 @@ def submit_weight(request):
         if weight:  # Check if weight is provided
             try:
                 WeightRecord.objects.create(user=request.user, weight=float(weight))  # Save the record
+                messages.success(request, f'Weight of {weight} kg recorded successfully!')
                 return redirect('home')  # Redirect to the dashboard with name 'home'
+            except ValueError:
+                messages.error(request, 'Invalid weight value. Please enter a valid number.')
+                return redirect('home')
             except Exception as e:
                 print(f"Error saving weight: {e}")  # Print any error that occurs
-                return HttpResponse("An error occurred while saving your weight.")  # Optional: send an error response
+                messages.error(request, 'An error occurred while saving your weight.')
+                return redirect('home')
         else:
-            return HttpResponse("No weight provided, and unable to read from the scale.")  # Handle case where no weight is read
+            messages.warning(request, 'No weight provided, and unable to read from the scale.')
+            return redirect('home')
         
     return render(request, 'dashboard.html')  # Render the dashboard if not POST
 
@@ -107,3 +155,133 @@ def export_weights(request):
         writer.writerow([record.id, record.weight, formatted_date])  # Include record ID
 
     return response
+
+@login_required
+def chart_data(request):
+    from datetime import timedelta, datetime
+    from django.utils import timezone
+    from collections import defaultdict
+    
+    try:
+        days = int(request.GET.get('days', 7))
+        
+        # Use TODAY as the reference point
+        end_date = timezone.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get only records within the ACTUAL time period from today
+        records = WeightRecord.objects.filter(
+            user=request.user,
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        ).order_by('created_at')
+        
+        # Create dictionary to store weights by date for averaging
+        weights_by_date = defaultdict(list)
+        for record in records:
+            date_key = record.created_at.date()
+            weights_by_date[date_key].append(float(record.weight))
+        
+        # Generate complete date range with average per day
+        date_labels = []
+        weight_values = []
+        
+        current_date = start_date.date()
+        end_date_only = end_date.date()
+        found_first_data = False
+        
+        while current_date <= end_date_only:
+            # Format date label
+            date_labels.append(current_date.strftime('%b %d'))
+            
+            # Get AVERAGE weight for this date
+            if current_date in weights_by_date:
+                # Calculate average of all measurements on this day
+                avg_weight = sum(weights_by_date[current_date]) / len(weights_by_date[current_date])
+                weight_values.append(round(avg_weight, 1))
+                found_first_data = True
+            else:
+                # Use 0 for days BEFORE first data, null for days AFTER
+                if not found_first_data:
+                    weight_values.append(0)  # Flat baseline at 0 before data
+                else:
+                    weight_values.append(None)  # Null after data
+            
+            current_date += timedelta(days=1)
+        
+        return JsonResponse({
+            'dates': date_labels,
+            'weights': weight_values,
+            'count': len([w for w in weight_values if w is not None]),
+            'period': f'Last {days} days',
+            'total_days': len(date_labels)
+        })
+    except Exception as e:
+        print(f"Chart data error: {e}")  # Debug print
+        return JsonResponse({
+            'dates': [],
+            'weights': [],
+            'error': str(e)
+        }, status=500)
+
+@login_required
+def edit_record(request, record_id):
+    import json
+    if request.method == 'POST':
+        try:
+            record = WeightRecord.objects.get(id=record_id, user=request.user)
+            data = json.loads(request.body)
+            new_weight = float(data.get('weight'))
+            record.weight = new_weight
+            record.save()
+            return JsonResponse({'success': True})
+        except WeightRecord.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Record not found'})
+        except ValueError:
+            return JsonResponse({'success': False, 'error': 'Invalid weight value'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def delete_record(request, record_id):
+    if request.method == 'POST':
+        try:
+            record = WeightRecord.objects.get(id=record_id, user=request.user)
+            record.delete()
+            return JsonResponse({'success': True})
+        except WeightRecord.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Record not found'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def all_records(request):
+    from django.core.paginator import Paginator
+    
+    # Get all records
+    all_records = WeightRecord.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Date filtering
+    date_from = request.GET.get('from')
+    date_to = request.GET.get('to')
+    
+    if date_from:
+        all_records = all_records.filter(created_at__date__gte=date_from)
+    if date_to:
+        all_records = all_records.filter(created_at__date__lte=date_to)
+    
+    # Pagination
+    paginator = Paginator(all_records, 20)  # 20 records per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'weight_records': page_obj,
+        'total_records': all_records.count(),
+        'page_obj': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+    }
+    
+    return render(request, 'all_records.html', context)

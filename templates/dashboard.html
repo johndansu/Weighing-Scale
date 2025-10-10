@@ -1,91 +1,575 @@
 {% load static %}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weighing Dashboard</title>
+    <title>Dashboard - Weighing System</title>
     <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
     <link rel="icon" href="{% static 'images/1.png' %}" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <header>
-        <div class="logo">
-            <img src="{% static 'images/1.png' %}" alt="Weighing System Logo" style="height: 50px;">
+        <div class="header-left">
+            <img src="{% static 'images/1.png' %}" alt="Logo" class="header-logo">
+            <h1 class="header-title">Weighing System</h1>
         </div>
-        <div class="logo">Weighing System</div>
         <nav class="user-menu">
-            <span>Welcome, {{ request.user.username }}</span>
-            <form method="POST" action="{% url 'logout' %}" style="display: inline;">
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <span>{{ request.user.username }}</span>
+            </div>
+            <form method="POST" action="{% url 'logout' %}" class="logout-form">
                 {% csrf_token %}
-                <button type="submit" style="background-color: green; color: white; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer;">
-                    Logout
+                <button type="submit" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
             </form>
         </nav>
     </header>
 
     <div class="dashboard-container">
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #1a73e8;">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Total Records</h3>
+                    <p class="stat-value">{{ total_records }}</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #188038;">
+                    <i class="fas fa-weight"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Last Weight</h3>
+                    <p class="stat-value">{% if weight_records.0 %}{{ weight_records.0.weight }} kg{% else %}N/A{% endif %}</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e37400;">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Today's Records</h3>
+                    <p class="stat-value">{{ today_records }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Statistics -->
+        <div class="stats-grid" style="margin-top: 16px;">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #5f6368;">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Average Weight</h3>
+                    <p class="stat-value">{{ avg_weight }} kg</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #c5221f;">
+                    <i class="fas fa-arrow-down"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Minimum Weight</h3>
+                    <p class="stat-value">{{ min_weight }} kg</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #137333;">
+                    <i class="fas fa-arrow-up"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Maximum Weight</h3>
+                    <p class="stat-value">{{ max_weight }} kg</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Weighing Section -->
-        <section class="weighing-section">
-            <h2 style="text-align: center;">Weighing</h2>
-            <form method="POST" action="{% url 'weighing_process' %}">
+        <section class="weighing-section card">
+            <div class="card-header">
+                <h2><i class="fas fa-balance-scale"></i> Record New Weight</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{% url 'weighing_process' %}" class="weight-form">
                 {% csrf_token %}
-                <label for="weight">Weight (kg):</label>
-                <input type="text" id="weight" name="weight" placeholder="Enter manually" required>
-                <button type="button" id="get-weight">Get Weight from Scale</button>
-                <p id="captured-weight"></p>
-                <br><br>
-                <button type="submit">Submit</button>  <!-- Submit button -->
+                    <div class="weight-input-group">
+                        <label for="weight"><i class="fas fa-weight-hanging"></i> Weight (kg):</label>
+                        <div class="input-with-button">
+                            <input type="text" id="weight" name="weight" placeholder="Enter weight manually" required>
+                            <button type="button" id="get-weight" class="btn-secondary">
+                                <i class="fas fa-sync-alt"></i> Get from Scale
+                            </button>
+                        </div>
+                        <p id="captured-weight" class="captured-weight-text"></p>
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save"></i> Submit Weight
+                    </button>
             </form> 
+            </div>
+        </section>
+
+        <!-- Weight Trends Chart -->
+        <section class="chart-section card">
+            <div class="card-header">
+                <h2><i class="fas fa-chart-line"></i> Weight Trends</h2>
+                <div class="chart-controls">
+                    <button class="btn-chart-filter active" data-days="7">7 Days</button>
+                    <button class="btn-chart-filter" data-days="30">30 Days</button>
+                    <button class="btn-chart-filter" data-days="90">90 Days</button>
+                </div>
+            </div>
+            <div class="card-body" style="position: relative;">
+                <div id="chartLoading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #5f6368;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 32px; margin-bottom: 10px;"></i>
+                    <p>Loading chart...</p>
+                </div>
+                <canvas id="weightChart"></canvas>
+            </div>
         </section>
 
         <!-- Review Records Section -->
-        <section class="review-section">
-            <h2>Review Weighing Records:</h2>
-            <table>
+        <section class="review-section card">
+            <div class="card-header">
+                <h2><i class="fas fa-history"></i> Weight Records</h2>
+                <div class="header-actions">
+                    <a href="{% url 'export_weights' %}" class="btn-export">
+                        <i class="fas fa-file-csv"></i> CSV
+                    </a>
+                    <a href="#" class="btn-export" style="background: #c5221f;" onclick="exportPDF(); return false;">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Filter Section -->
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar"></i> From:</label>
+                        <input type="date" id="dateFrom" class="filter-input">
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar"></i> To:</label>
+                        <input type="date" id="dateTo" class="filter-input">
+                    </div>
+                    <button class="btn-secondary" onclick="filterRecords()">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <button class="btn-secondary" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+
+                {% if weight_records %}
+                    <div class="table-responsive">
+                        <table class="modern-table" id="recordsTable">
                 <thead>
                     <tr>
-                        <th>Record ID</th>
-                        {% comment %} <th>Username</th>  <!-- Change to Username --> {% endcomment %}
-                        <th>Weight (kg)</th>
-                        <th>Date</th>
+                                    <th><i class="fas fa-hashtag"></i> ID</th>
+                                    <th><i class="fas fa-weight"></i> Weight (kg)</th>
+                                    <th><i class="fas fa-calendar"></i> Date & Time</th>
+                                    <th><i class="fas fa-cog"></i> Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for record in weight_records %}
-                        <tr>
-                            <td>{{ record.id }}</td>
-                            {% comment %} <td>{{ record.user.username }}</td>  <!-- Display Username --> {% endcomment %}
-                            <td>{{ record.weight }}</td>
-                            <td>{{ record.created_at|date:"Y-m-d h:i A" }}</td>  <!-- Updated date format -->
+                                    <tr data-id="{{ record.id }}">
+                                        <td>#{{ record.id }}</td>
+                                        <td><strong class="weight-value">{{ record.weight }}</strong></td>
+                                        <td class="date-value">{{ record.created_at|date:"M d, Y - h:i A" }}</td>
+                                        <td>
+                                            <button class="btn-action btn-edit" onclick="editRecord({{ record.id }}, {{ record.weight }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn-action btn-delete" onclick="deleteRecord({{ record.id }})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            <div style="text-align: center; margin-top: 20px;">
-                <a href="{% url 'export_weights' %}" 
-                   style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; border-radius: 5px; transition: background-color 0.3s ease;">
-                    Download My Weight Records
-                </a>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if total_records > 10 %}
+                        <div class="pagination">
+                            <a href="?page=1" class="btn-page"><i class="fas fa-angle-double-left"></i></a>
+                            <a href="?page={{ page_number|add:-1 }}" class="btn-page"><i class="fas fa-angle-left"></i></a>
+                            <span class="page-info">Page {{ page_number }} of {{ total_pages }}</span>
+                            <a href="?page={{ page_number|add:1 }}" class="btn-page"><i class="fas fa-angle-right"></i></a>
+                            <a href="?page={{ total_pages }}" class="btn-page"><i class="fas fa-angle-double-right"></i></a>
+                        </div>
+                    {% endif %}
+
+                    <!-- View All Link -->
+                    <div style="text-align: center; margin-top: 16px;">
+                        <a href="{% url 'all_records' %}" class="btn-secondary">
+                            <i class="fas fa-list"></i> View All Records ({{ total_records }})
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No weight records yet. Add your first measurement above!</p>
+                    </div>
+                {% endif %}
             </div>
         </section>
     </div>
 
+    <footer class="dashboard-footer">
+        <p>&copy; 2025 Weighing Scale Management System. All rights reserved.</p>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="{% static 'js/notifications.js' %}"></script>
     <script>
+        // Check for Django messages and show as toasts
+        {% if messages %}
+            {% for message in messages %}
+                showToast('{{ message }}', '{{ message.tags }}');
+            {% endfor %}
+        {% endif %}
+
+        // Weight Chart
+        let weightChart;
+        function loadChart(days = 7) {
+            console.log('Loading chart for', days, 'days');
+            
+            fetch(`/chart_data/?days=${days}`)
+                .then(response => {
+                    console.log('Chart response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Chart data received:', data);
+                    
+                    const ctx = document.getElementById('weightChart');
+                    if (!ctx) {
+                        console.error('Chart canvas not found!');
+                        showToast('Chart element not found', 'error');
+                        return;
+                    }
+                    
+                    const context = ctx.getContext('2d');
+                    
+                    if (weightChart) {
+                        weightChart.destroy();
+                    }
+                    
+                    // Handle no data scenario
+                    if (!data.dates || data.dates.length === 0) {
+                        console.log('No data for chart, showing empty state');
+                        weightChart = new Chart(context, {
+                            type: 'line',
+                            data: {
+                                labels: ['No Data'],
+                                datasets: [{
+                                    label: 'Weight (kg)',
+                                    data: [0],
+                                    borderColor: '#dadce0',
+                                    backgroundColor: 'rgba(218, 220, 224, 0.1)',
+                                    tension: 0.4,
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: data.message || 'No weight records in this period'
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                        return;
+                    }
+                    
+                    console.log('Creating chart with', data.dates.length, 'data points');
+                    
+                    // Hide loading indicator
+                    const loadingDiv = document.getElementById('chartLoading');
+                    if (loadingDiv) loadingDiv.style.display = 'none';
+                    
+                    // Create chart with data
+                    weightChart = new Chart(context, {
+                        type: 'line',
+                        data: {
+                            labels: data.dates,
+                            datasets: [{
+                                label: 'Weight (kg)',
+                                data: data.weights,
+                                borderColor: '#1a73e8',
+                                backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                spanGaps: true,  // Connect through gaps with line
+                                pointBackgroundColor: '#1a73e8',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                borderWidth: 3
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    enabled: true,
+                                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                    padding: 12,
+                                    titleColor: '#fff',
+                                    titleFont: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    },
+                                    bodyColor: '#fff',
+                                    bodyFont: {
+                                        size: 13
+                                    },
+                                    borderColor: '#1a73e8',
+                                    borderWidth: 1,
+                                    displayColors: false,
+                                    callbacks: {
+                                        title: function(context) {
+                                            return context[0].label;
+                                        },
+                                        label: function(context) {
+                                            return 'Weight: ' + context.parsed.y.toFixed(1) + ' kg';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: {
+                                        display: false
+                                    },
+                                    ticks: {
+                                        maxRotation: 45,
+                                        minRotation: 45,
+                                        font: {
+                                            size: 11
+                                        },
+                                        autoSkip: true,
+                                        maxTicksLimit: 10
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,  // Start Y-axis from 0 for baseline
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)'
+                                    },
+                                    ticks: {
+                                        font: {
+                                            size: 12
+                                        },
+                                        callback: function(value) {
+                                            return value.toFixed(1) + ' kg';
+                                        },
+                                        padding: 10
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    console.log('Chart created successfully');
+                })
+                .catch(error => {
+                    console.error('Error loading chart:', error);
+                    showToast('Error loading weight chart: ' + error.message, 'error');
+                });
+        }
+
+        // Chart filter buttons
+        document.querySelectorAll('.btn-chart-filter').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.btn-chart-filter').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                loadChart(this.dataset.days);
+            });
+        });
+
+        // Load chart on page load - check if Chart.js is available
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js library not loaded!');
+            const loadingDiv = document.getElementById('chartLoading');
+            if (loadingDiv) {
+                loadingDiv.innerHTML = '<i class="fas fa-exclamation-circle" style="font-size: 32px; color: #c5221f;"></i><p style="color: #c5221f;">Error: Chart library failed to load. Check internet connection.</p>';
+            }
+            showToast('Chart.js library not loaded. Check your internet connection.', 'error');
+        } else {
+            console.log('Chart.js loaded successfully, version:', Chart.version);
+            loadChart();
+        }
+
+        // Get weight from scale
         document.getElementById('get-weight').addEventListener('click', function() {
-            fetch('/authentication/fetch_weight/')
+            const button = this;
+            const icon = button.querySelector('i');
+            
+            button.disabled = true;
+            icon.classList.add('fa-spin');
+            
+            fetch('/fetch_weight/')
                 .then(response => response.json())
                 .then(data => {
                     if (data.weight) {
-                        document.getElementById('captured-weight').innerText = `Captured Weight: ${data.weight} kg`;
-                        document.getElementById('weight').value = data.weight;  // Set the weight input value
+                        document.getElementById('captured-weight').innerHTML = `<i class="fas fa-check-circle"></i> Captured Weight: <strong>${data.weight} kg</strong>`;
+                        document.getElementById('weight').value = data.weight;
+                        showToast(`Weight captured: ${data.weight} kg`, 'success');
                     } else {
-                        console.error('Error fetching weight:', data.error);
+                        const errorMsg = data.error || 'Could not fetch weight';
+                        document.getElementById('captured-weight').innerHTML = `<i class="fas fa-exclamation-circle"></i> Error: ${errorMsg}`;
+                        showToast(errorMsg, 'error');
                     }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    const errorMsg = 'Error connecting to scale';
+                    document.getElementById('captured-weight').innerHTML = `<i class="fas fa-exclamation-circle"></i> ${errorMsg}`;
+                    showToast(errorMsg, 'error');
+                })
+                .finally(() => {
+                    button.disabled = false;
+                    icon.classList.remove('fa-spin');
+                });
         });
+
+        // Edit Record
+        function editRecord(id, weight) {
+            const newWeight = prompt('Enter new weight (kg):', weight);
+            if (newWeight && newWeight !== weight) {
+                fetch(`/edit_record/${id}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ weight: newWeight })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Record updated successfully', 'success');
+                        location.reload();
+                    } else {
+                        showToast(data.error || 'Error updating record', 'error');
+                    }
+                });
+            }
+        }
+
+        // Delete Record
+        function deleteRecord(id) {
+            if (confirm('Are you sure you want to delete this record?')) {
+                fetch(`/delete_record/${id}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Record deleted successfully', 'success');
+                        document.querySelector(`tr[data-id="${id}"]`).remove();
+                        location.reload();
+                    } else {
+                        showToast(data.error || 'Error deleting record', 'error');
+                    }
+                });
+            }
+        }
+
+        // Filter Records
+        function filterRecords() {
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            
+            if (!from && !to) {
+                showToast('Please select at least one date', 'warning');
+                return;
+            }
+            
+            window.location.href = `?from=${from}&to=${to}`;
+        }
+
+        function clearFilters() {
+            window.location.href = '{% url "home" %}';
+        }
+
+        // PDF Export
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(18);
+            doc.text('Weight Records Report', 14, 20);
+            
+            doc.setFontSize(11);
+            doc.text('{{ request.user.username }}', 14, 30);
+            doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 36);
+            
+            const tableData = [];
+            document.querySelectorAll('#recordsTable tbody tr').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                tableData.push([
+                    cells[0].textContent.trim(),
+                    cells[1].textContent.trim(),
+                    cells[2].textContent.trim()
+                ]);
+            });
+            
+            doc.autoTable({
+                startY: 45,
+                head: [['ID', 'Weight (kg)', 'Date & Time']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [26, 115, 232] }
+            });
+            
+            doc.save('weight_records.pdf');
+            showToast('PDF downloaded successfully', 'success');
+        }
     </script>
 </body>
 </html>
