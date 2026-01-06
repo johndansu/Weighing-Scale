@@ -90,17 +90,44 @@ WSGI_APPLICATION = "Weighing.wsgi.application"
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 # Use Supabase (PostgreSQL) if DATABASE_URL is provided, otherwise use SQLite for local development
-if os.environ.get("DATABASE_URL"):
-    import dj_database_url
-    # Configure database from Supabase connection string
-    db_config = dj_database_url.config(
-        default=os.environ.get("DATABASE_URL"),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-    DATABASES = {
-        "default": db_config
-    }
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    try:
+        import dj_database_url
+        from urllib.parse import quote_plus
+        
+        # Clean and validate DATABASE_URL
+        # Remove any whitespace
+        database_url = database_url.strip()
+        
+        # If the URL doesn't start with postgresql:// or postgres://, try to fix it
+        if not database_url.startswith(('postgresql://', 'postgres://')):
+            # If it's missing the scheme, add it
+            if '@' in database_url and '://' not in database_url:
+                database_url = 'postgresql://' + database_url
+        
+        # Configure database from Supabase connection string
+        db_config = dj_database_url.config(
+            default=database_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+        DATABASES = {
+            "default": db_config
+        }
+    except (ValueError, Exception) as e:
+        # If DATABASE_URL is invalid, fall back to SQLite and log the error
+        # This prevents the app from crashing on startup
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Invalid DATABASE_URL format: {str(e)}. Falling back to SQLite.")
+        logger.error(f"DATABASE_URL value (first 50 chars): {database_url[:50] if database_url else 'None'}")
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
 else:
     # Fallback to SQLite for local development only
     DATABASES = {
