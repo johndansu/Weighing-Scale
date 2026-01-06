@@ -21,12 +21,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-3y2#=mxo8@fwsi(ua4vvh(8hb#d4z4!i4+6d@cd-)a9*mn7l9("
+SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-3y2#=mxo8@fwsi(ua4vvh(8hb#d4z4!i4+6d@cd-)a9*mn7l9(")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+# Allow Vercel domains
+ALLOWED_HOSTS = [
+    ".vercel.app",
+    ".now.sh",
+    "localhost",
+    "127.0.0.1",
+] + (os.environ.get("ALLOWED_HOSTS", "").split(",") if os.environ.get("ALLOWED_HOSTS") else [])
 
 
 # Application definition
@@ -43,6 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # For serving static files on Vercel
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -75,24 +82,20 @@ WSGI_APPLICATION = "Weighing.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+# Use PostgreSQL on Vercel (SQLite won't work on serverless)
+if os.environ.get("DATABASE_URL"):
+    import dj_database_url
+    DATABASES = {
+        "default": dj_database_url.config(default=os.environ.get("DATABASE_URL"))
     }
-    # 'default':{
-    #     'ENGINE':'mssql',                    # Must be "mssql"
-    #     'NAME':'learning',                       # DB name "test"
-    #     'USER':'sa',        
-    #     'PASSWORD':'fa13taha',
-    #     'HOST':'JOHN\\SQLEXPRESS', # <server>\<instance>
-    #     'PORT':'1433',                           # Keep it blank
-    #     'OPTIONS': {
-    #         'driver': 'ODBC Driver 18 for SQL Server',
-    #         'extra_params': 'TrustServerCertificate=no;',
-    #     },
-    # }
-}
+else:
+    # Fallback to SQLite for local development
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # Password validation
@@ -136,6 +139,10 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# WhiteNoise configuration for static files
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
