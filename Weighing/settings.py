@@ -82,24 +82,20 @@ WSGI_APPLICATION = "Weighing.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# Use PostgreSQL if DATABASE_URL is provided, otherwise use SQLite
+# Use Supabase (PostgreSQL) if DATABASE_URL is provided, otherwise use SQLite for local development
 if os.environ.get("DATABASE_URL"):
-    try:
-        import dj_database_url
-        DATABASES = {
-            "default": dj_database_url.config(default=os.environ.get("DATABASE_URL"))
-        }
-    except ImportError:
-        # Fallback to SQLite if dj-database-url is not installed
-        DATABASES = {
-            "default": {
-                "ENGINE": "django.db.backends.sqlite3",
-                "NAME": BASE_DIR / "db.sqlite3",
-            }
-        }
+    import dj_database_url
+    # Configure database from Supabase connection string
+    db_config = dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+    DATABASES = {
+        "default": db_config
+    }
 else:
-    # Default to SQLite (Django's built-in database)
-    # NOTE: On Vercel, SQLite will be read-only. For production with writes, use PostgreSQL.
+    # Fallback to SQLite for local development only
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
